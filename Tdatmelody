@@ -1,0 +1,921 @@
+--==================================================
+-- TDAT K14 HUB
+-- RAYFIELD STYLE - ROBLOX UI THUẦN
+-- LocalScript: StarterPlayer > StarterPlayerScripts
+--==================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LP = Players.LocalPlayer
+local PG = LP:WaitForChild("PlayerGui")
+local Camera = workspace.CurrentCamera
+
+local TEST_KEY = "tdatvip2026"
+
+--==================================================
+-- STATE
+--==================================================
+
+local ESPEnabled = false
+local AimEnabled = false
+local SpeedEnabled = false
+local JumpEnabled = false
+local FOVEnabled = true
+
+local SpeedValue = 32
+local JumpValue = 100
+local AimFOV = 120
+local AimSmooth = 18
+
+local Attacking = false
+local EquippedTool = nil
+
+local ESPObjects = {}
+local ToolConnections = {}
+
+--==================================================
+-- COLORS
+--==================================================
+
+local COLORS = {
+    Background = Color3.fromRGB(16, 16, 22),
+    Sidebar = Color3.fromRGB(21, 21, 29),
+    Element = Color3.fromRGB(29, 29, 39),
+    ElementHover = Color3.fromRGB(38, 38, 50),
+    Accent = Color3.fromRGB(138, 75, 255),
+    AccentDark = Color3.fromRGB(105, 55, 200),
+    Text = Color3.fromRGB(245, 245, 250),
+    SubText = Color3.fromRGB(155, 155, 170),
+    White = Color3.fromRGB(255, 255, 255),
+    Green = Color3.fromRGB(75, 220, 120),
+    Red = Color3.fromRGB(255, 80, 90)
+}
+
+--==================================================
+-- CLEAN
+--==================================================
+
+local old = PG:FindFirstChild("TDAT_K14_RAYFIELD")
+if old then
+    old:Destroy()
+end
+
+--==================================================
+-- HELPERS
+--==================================================
+
+local function Corner(obj, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius or 8)
+    c.Parent = obj
+    return c
+end
+
+local function Border(obj, color)
+    local s = Instance.new("UIStroke")
+    s.Color = color or Color3.fromRGB(55, 55, 70)
+    s.Thickness = 1
+    s.Transparency = 0.2
+    s.Parent = obj
+    return s
+end
+
+local function Label(parent, text, size, pos, fontSize)
+    local l = Instance.new("TextLabel")
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.TextColor3 = COLORS.Text
+    l.Font = Enum.Font.GothamMedium
+    l.TextSize = fontSize or 14
+    l.Size = size
+    l.Position = pos
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Parent = parent
+    return l
+end
+
+local function Button(parent, text, size, pos)
+    local b = Instance.new("TextButton")
+    b.AutoButtonColor = false
+    b.BackgroundColor3 = COLORS.Element
+    b.TextColor3 = COLORS.Text
+    b.Text = text
+    b.Font = Enum.Font.GothamMedium
+    b.TextSize = 13
+    b.Size = size
+    b.Position = pos
+    b.Parent = parent
+    Corner(b, 7)
+    return b
+end
+
+--==================================================
+-- KEY GUI
+--==================================================
+
+local KeyGui = Instance.new("ScreenGui")
+KeyGui.Name = "TDAT_KEY"
+KeyGui.ResetOnSpawn = false
+KeyGui.DisplayOrder = 100
+KeyGui.Parent = PG
+
+local KeyFrame = Instance.new("Frame")
+KeyFrame.AnchorPoint = Vector2.new(.5,.5)
+KeyFrame.Position = UDim2.fromScale(.5,.5)
+KeyFrame.Size = UDim2.fromOffset(360,245)
+KeyFrame.BackgroundColor3 = COLORS.Background
+KeyFrame.Parent = KeyGui
+Corner(KeyFrame,12)
+Border(KeyFrame,COLORS.Accent)
+
+local KeyTitle = Label(
+    KeyFrame,
+    "TDAT K14",
+    UDim2.new(1,-30,0,35),
+    UDim2.fromOffset(15,15),
+    23
+)
+
+KeyTitle.Font = Enum.Font.GothamBold
+KeyTitle.TextXAlignment = Enum.TextXAlignment.Center
+
+local KeySub = Label(
+    KeyFrame,
+    "RAYFIELD STYLE",
+    UDim2.new(1,-30,0,20),
+    UDim2.fromOffset(15,49),
+    10
+)
+
+KeySub.TextColor3 = COLORS.SubText
+KeySub.TextXAlignment = Enum.TextXAlignment.Center
+
+local KeyBox = Instance.new("TextBox")
+KeyBox.Size = UDim2.new(1,-40,0,42)
+KeyBox.Position = UDim2.fromOffset(20,85)
+KeyBox.BackgroundColor3 = COLORS.Element
+KeyBox.TextColor3 = COLORS.Text
+KeyBox.PlaceholderColor3 = COLORS.SubText
+KeyBox.PlaceholderText = "Nhập key..."
+KeyBox.Text = ""
+KeyBox.ClearTextOnFocus = false
+KeyBox.Font = Enum.Font.Gotham
+KeyBox.TextSize = 14
+KeyBox.Parent = KeyFrame
+Corner(KeyBox,8)
+Border(KeyBox)
+
+local KeyButton = Button(
+    KeyFrame,
+    "XÁC NHẬN KEY",
+    UDim2.new(1,-40,0,42),
+    UDim2.fromOffset(20,140)
+)
+
+KeyButton.BackgroundColor3 = COLORS.Accent
+
+local KeyStatus = Label(
+    KeyFrame,
+    "",
+    UDim2.new(1,-40,0,25),
+    UDim2.fromOffset(20,192),
+    12
+)
+
+KeyStatus.TextXAlignment = Enum.TextXAlignment.Center
+
+--==================================================
+-- MAIN GUI
+--==================================================
+
+local GUI = Instance.new("ScreenGui")
+GUI.Name = "TDAT_K14_RAYFIELD"
+GUI.ResetOnSpawn = false
+GUI.Enabled = false
+GUI.DisplayOrder = 99
+GUI.Parent = PG
+
+local Window = Instance.new("Frame")
+Window.AnchorPoint = Vector2.new(.5,.5)
+Window.Position = UDim2.fromScale(.5,.5)
+Window.Size = UDim2.fromOffset(680,430)
+Window.BackgroundColor3 = COLORS.Background
+Window.Parent = GUI
+Corner(Window,12)
+Border(Window,COLORS.Accent)
+
+--==================================================
+-- TOP
+--==================================================
+
+local Top = Instance.new("Frame")
+Top.Size = UDim2.new(1,0,0,55)
+Top.BackgroundColor3 = COLORS.Background
+Top.Parent = Window
+
+local Title = Label(
+    Top,
+    "TDAT K14",
+    UDim2.fromOffset(200,30),
+    UDim2.fromOffset(18,7),
+    20
+)
+
+Title.Font = Enum.Font.GothamBold
+
+local Version = Label(
+    Top,
+    "Rayfield Style",
+    UDim2.fromOffset(200,20),
+    UDim2.fromOffset(19,31),
+    10
+)
+
+Version.TextColor3 = COLORS.SubText
+
+local Minimize = Button(
+    Top,
+    "—",
+    UDim2.fromOffset(38,34),
+    UDim2.new(1,-92,0,10)
+)
+
+local Close = Button(
+    Top,
+    "×",
+    UDim2.fromOffset(38,34),
+    UDim2.new(1,-48,0,10)
+)
+
+Close.BackgroundColor3 = Color3.fromRGB(50,28,35)
+
+--==================================================
+-- DRAG
+--==================================================
+
+local dragging = false
+local dragStart
+local startPosition
+
+Top.InputBegan:Connect(function(input)
+
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+
+        dragging = true
+        dragStart = input.Position
+        startPosition = Window.Position
+
+        input.Changed:Connect(function()
+
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+
+        end)
+
+    end
+
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+
+    if not dragging then
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch then
+
+        local delta = input.Position - dragStart
+
+        Window.Position = UDim2.new(
+            startPosition.X.Scale,
+            startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale,
+            startPosition.Y.Offset + delta.Y
+        )
+
+    end
+
+end)
+
+Close.Activated:Connect(function()
+    Window.Visible = false
+end)
+
+local minimized = false
+
+Minimize.Activated:Connect(function()
+
+    minimized = not minimized
+
+    if minimized then
+        Window.Size = UDim2.fromOffset(680,55)
+    else
+        Window.Size = UDim2.fromOffset(680,430)
+    end
+
+end)
+
+--==================================================
+-- SIDEBAR
+--==================================================
+
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.fromOffset(155,365)
+Sidebar.Position = UDim2.fromOffset(10,60)
+Sidebar.BackgroundColor3 = COLORS.Sidebar
+Sidebar.Parent = Window
+Corner(Sidebar,10)
+
+local Logo = Label(
+    Sidebar,
+    "TDAT K14",
+    UDim2.new(1,-20,0,30),
+    UDim2.fromOffset(10,12),
+    17
+)
+
+Logo.Font = Enum.Font.GothamBold
+
+local Creator = Label(
+    Sidebar,
+    "tdat đẹp zai nhất vũ trụ",
+    UDim2.new(1,-20,0,40),
+    UDim2.fromOffset(10,40),
+    9
+)
+
+Creator.TextColor3 = COLORS.Accent
+Creator.TextWrapped = true
+
+--==================================================
+-- CONTENT
+--==================================================
+
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1,-175,1,-70)
+Content.Position = UDim2.fromOffset(165,60)
+Content.BackgroundColor3 = COLORS.Sidebar
+Content.Parent = Window
+Corner(Content,10)
+
+local Pages = {}
+local TabButtons = {}
+
+local function CreateTab(name,index)
+
+    local tab = Button(
+        Sidebar,
+        name,
+        UDim2.new(1,-20,0,38),
+        UDim2.fromOffset(10,90 + ((index-1)*45))
+    )
+
+    local page = Instance.new("ScrollingFrame")
+    page.Size = UDim2.new(1,-20,1,-20)
+    page.Position = UDim2.fromOffset(10,10)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 3
+    page.Visible = false
+    page.CanvasSize = UDim2.new(0,0,0,0)
+    page.Parent = Content
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0,9)
+    layout.Parent = page
+
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+
+        page.CanvasSize = UDim2.fromOffset(
+            0,
+            layout.AbsoluteContentSize.Y + 20
+        )
+
+    end)
+
+    Pages[name] = page
+    TabButtons[name] = tab
+
+    tab.Activated:Connect(function()
+
+        for _,p in pairs(Pages) do
+            p.Visible = false
+        end
+
+        for _,b in pairs(TabButtons) do
+            b.BackgroundColor3 = COLORS.Element
+        end
+
+        page.Visible = true
+        tab.BackgroundColor3 = COLORS.Accent
+
+    end)
+
+    return page
+end
+
+local Combat = CreateTab("Combat",1)
+local Visual = CreateTab("Visual",2)
+local Movement = CreateTab("Movement",3)
+local Info = CreateTab("Info",4)
+
+--==================================================
+-- TOGGLE
+--==================================================
+
+local function Toggle(parent,text,default,callback)
+
+    local holder = Instance.new("Frame")
+    holder.Size = UDim2.new(1,-10,0,55)
+    holder.BackgroundColor3 = COLORS.Element
+    holder.Parent = parent
+    Corner(holder,8)
+
+    local textLabel = Label(
+        holder,
+        text,
+        UDim2.new(1,-80,1,0),
+        UDim2.fromOffset(14,0),
+        14
+    )
+
+    local switch = Instance.new("TextButton")
+    switch.Size = UDim2.fromOffset(46,25)
+    switch.Position = UDim2.new(1,-60,.5,-12)
+    switch.Text = ""
+    switch.AutoButtonColor = false
+    switch.Parent = holder
+    Corner(switch,15)
+
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.fromOffset(19,19)
+    knob.Position = UDim2.fromOffset(3,3)
+    knob.Parent = switch
+    Corner(knob,12)
+
+    local state = default
+
+    local function Update()
+
+        if state then
+            switch.BackgroundColor3 = COLORS.Accent
+            knob.Position = UDim2.new(1,-22,0,3)
+        else
+            switch.BackgroundColor3 = Color3.fromRGB(65,65,75)
+            knob.Position = UDim2.fromOffset(3,3)
+        end
+
+    end
+
+    switch.Activated:Connect(function()
+
+        state = not state
+
+        Update()
+
+        if callback then
+            callback(state)
+        end
+
+    end)
+
+    Update()
+
+    return holder
+end
+
+--==================================================
+-- SLIDER
+--==================================================
+
+local function Slider(parent,text,min,max,default,callback)
+
+    local holder = Instance.new("Frame")
+    holder.Size = UDim2.new(1,-10,0,72)
+    holder.BackgroundColor3 = COLORS.Element
+    holder.Parent = parent
+    Corner(holder,8)
+
+    local name = Label(
+        holder,
+        text,
+        UDim2.new(.7,0,0,25),
+        UDim2.fromOffset(14,7),
+        13
+    )
+
+    local valueLabel = Label(
+        holder,
+        tostring(default),
+        UDim2.fromOffset(70,25),
+        UDim2.new(1,-85,0,7),
+        13
+    )
+
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valueLabel.TextColor3 = COLORS.Accent
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(1,-28,0,6)
+    bar.Position = UDim2.fromOffset(14,47)
+    bar.BackgroundColor3 = Color3.fromRGB(60,60,70)
+    bar.Parent = holder
+    Corner(bar,5)
+
+    local fill = Instance.new("Frame")
+    fill.BackgroundColor3 = COLORS.Accent
+    fill.Size = UDim2.fromScale(
+        (default-min)/(max-min),
+        1
+    )
+    fill.Parent = bar
+    Corner(fill,5)
+
+    local draggingSlider = false
+
+    local function SetValue(x)
+
+        local percent = math.clamp(
+            (x-bar.AbsolutePosition.X) /
+            bar.AbsoluteSize.X,
+            0,
+            1
+        )
+
+        local value = math.floor(
+            min + ((max-min)*percent)
+        )
+
+        valueLabel.Text = tostring(value)
+
+        fill.Size = UDim2.fromScale(percent,1)
+
+        if callback then
+            callback(value)
+        end
+
+    end
+
+    bar.InputBegan:Connect(function(input)
+
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+            draggingSlider = true
+            SetValue(input.Position.X)
+
+        end
+
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+
+        if not draggingSlider then
+            return
+        end
+
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+            SetValue(input.Position.X)
+
+        end
+
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+            draggingSlider = false
+
+        end
+
+    end)
+
+    return holder
+end
+
+--==================================================
+-- COMBAT TAB
+--==================================================
+
+Toggle(
+    Combat,
+    "Aim Assist",
+    false,
+    function(v)
+        AimEnabled = v
+    end
+)
+
+Slider(
+    Combat,
+    "Aim FOV",
+    40,
+    300,
+    AimFOV,
+    function(v)
+        AimFOV = v
+    end
+)
+
+Slider(
+    Combat,
+    "Aim Smooth",
+    1,
+    50,
+    AimSmooth,
+    function(v)
+        AimSmooth = v
+    end
+)
+
+local CombatInfo = Label(
+    Combat,
+    "Aim Assist chỉ xử lý mục tiêu khi Tool của game được Activated.",
+    UDim2.new(1,-10,0,45),
+    UDim2.fromOffset(5,0),
+    11
+)
+
+CombatInfo.TextColor3 = COLORS.SubText
+CombatInfo.TextWrapped = true
+
+--==================================================
+-- VISUAL TAB
+--==================================================
+
+Toggle(
+    Visual,
+    "Player ESP",
+    false,
+    function(v)
+
+        ESPEnabled = v
+
+        if not v then
+
+            for player in pairs(ESPObjects) do
+
+                local data = ESPObjects[player]
+
+                if data.Highlight then
+                    data.Highlight:Destroy()
+                end
+
+                if data.Billboard then
+                    data.Billboard:Destroy()
+                end
+
+                ESPObjects[player] = nil
+
+            end
+
+        end
+
+    end
+)
+
+Toggle(
+    Visual,
+    "FOV Circle",
+    true,
+    function(v)
+        FOVEnabled = v
+    end
+)
+
+--==================================================
+-- MOVEMENT TAB
+--==================================================
+
+Toggle(
+    Movement,
+    "Speed",
+    false,
+    function(v)
+        SpeedEnabled = v
+    end
+)
+
+Slider(
+    Movement,
+    "Speed Value",
+    16,
+    100,
+    SpeedValue,
+    function(v)
+        SpeedValue = v
+    end
+)
+
+Toggle(
+    Movement,
+    "Jump",
+    false,
+    function(v)
+        JumpEnabled = v
+    end
+)
+
+Slider(
+    Movement,
+    "Jump Value",
+    50,
+    200,
+    JumpValue,
+    function(v)
+        JumpValue = v
+    end
+)
+
+--==================================================
+-- INFO TAB
+--==================================================
+
+local InfoTitle = Label(
+    Info,
+    "TDAT K14 HUB",
+    UDim2.new(1,-10,0,35),
+    UDim2.fromOffset(5,5),
+    20
+)
+
+InfoTitle.Font = Enum.Font.GothamBold
+
+local InfoText = Label(
+    Info,
+    "Rayfield Style UI\n\n" ..
+    "Combat\n" ..
+    "• Aim Assist\n" ..
+    "• Aim FOV\n" ..
+    "• Aim Smooth\n\n" ..
+    "Visual\n" ..
+    "• Player ESP\n" ..
+    "• FOV Circle\n\n" ..
+    "Movement\n" ..
+    "• Speed\n" ..
+    "• Jump\n\n" ..
+    "tdat đẹp zai nhất vũ trụ",
+    UDim2.new(1,-10,0,300),
+    UDim2.fromOffset(5,45),
+    13
+)
+
+InfoText.TextColor3 = COLORS.SubText
+InfoText.TextWrapped = true
+InfoText.TextYAlignment = Enum.TextYAlignment.Top
+
+--==================================================
+-- FOV CIRCLE
+--==================================================
+
+local FOVCircle = Instance.new("Frame")
+FOVCircle.Name = "TDAT_FOV"
+FOVCircle.AnchorPoint = Vector2.new(.5,.5)
+FOVCircle.BackgroundTransparency = 1
+FOVCircle.BorderSizePixel = 0
+FOVCircle.Visible = false
+FOVCircle.ZIndex = 100
+FOVCircle.Parent = GUI
+
+Corner(FOVCircle,999)
+
+local FOVStroke = Instance.new("UIStroke")
+FOVStroke.Color = COLORS.Accent
+FOVStroke.Thickness = 2
+FOVStroke.Parent = FOVCircle
+
+--==================================================
+-- ESP
+--==================================================
+
+local function RemoveESP(player)
+
+    local data = ESPObjects[player]
+
+    if not data then
+        return
+    end
+
+    if data.Highlight then
+        data.Highlight:Destroy()
+    end
+
+    if data.Billboard then
+        data.Billboard:Destroy()
+    end
+
+    ESPObjects[player] = nil
+end
+
+local function AddESP(player)
+
+    if player == LP then
+        return
+    end
+
+    local character = player.Character
+
+    if not character then
+        return
+    end
+
+    RemoveESP(player)
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "TDAT_PlayerESP"
+    highlight.Adornee = character
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.FillColor = COLORS.Accent
+    highlight.FillTransparency = .75
+    highlight.OutlineColor = COLORS.White
+    highlight.OutlineTransparency = 0
+    highlight.Enabled = true
+    highlight.Parent = character
+
+    local root =
+        character:FindFirstChild("HumanoidRootPart")
+        or character:FindFirstChild("UpperTorso")
+        or character:FindFirstChild("Torso")
+
+    local billboard
+
+    if root then
+
+        billboard = Instance.new("BillboardGui")
+        billboard.Name = "TDAT_NameESP"
+        billboard.Adornee = root
+        billboard.Size = UDim2.fromOffset(190,35)
+        billboard.StudsOffset = Vector3.new(0,3,0)
+        billboard.AlwaysOnTop = true
+        billboard.MaxDistance = 10000
+        billboard.Parent = PG
+
+        local text = Instance.new("TextLabel")
+        text.BackgroundTransparency = 1
+        text.Size = UDim2.fromScale(1,1)
+        text.Text = player.DisplayName .. "  @" .. player.Name
+        text.TextColor3 = COLORS.White
+        text.TextStrokeTransparency = 0
+        text.TextStrokeColor3 = Color3.new(0,0,0)
+        text.Font = Enum.Font.GothamBold
+        text.TextSize = 12
+        text.Parent = billboard
+
+    end
+
+    ESPObjects[player] = {
+        Highlight = highlight,
+        Billboard = billboard
+    }
+
+end
+
+--==================================================
+-- TARGET
+--==================================================
+
+local function GetTarget()
+
+    if not Camera then
+        return nil
+    end
+
+    local viewport = Camera.ViewportSize
+
+    local center = Vector2.new(
+        viewport.X/2,
+        viewport.Y/2
+    )
+
+    local target = nil
+    local closest = AimFOV
+
+    for _,player in ipairs(Players:GetPlayers()) do
+
+        if player ~= LP then
+
+            local character = player.Character
+
+            if character then
+
+                local humanoid =
+                    character:FindFirstChildOfClass("Humanoid")
+
+                local head =
+                    character:FindFirstChild("Head")
+
+                if humanoid
+                and humanoid.Health > 0
+                and head then
+
+                    local screen,visible =
+                        Camera:WorldToViewportPoint(head.Position)
